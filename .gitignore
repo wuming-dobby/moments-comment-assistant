@@ -25,6 +25,7 @@ Thumbs.db
 .env
 *.key
 secrets.json
+config.json
 
 # Screenshots (user data, not repo content)
 screenshots/
