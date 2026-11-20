@@ -35,7 +35,7 @@
    |---|---|
    | API Base URL | OpenAI 兼容接口地址；Ollama 本地填 `http://localhost:11434/v1` |
    | API Key | 服务商控制台获取（Ollama 可随便填） |
-   | Model | 视觉模型名，如 `Qwen/Qwen2.5-VL-7B-Instruct`、`glm-4v-flash` |
+   | Model | 视觉模型名，如 `Qwen/Qwen2.5-VL-7B-Instruct`、`GLM-4.6V-Flash` |
 
    配置保存在仓库根 `config.json`（已在 .gitignore，不会提交）。可选免费通道（2026-11 现状，以官方价格页为准）：
 
@@ -56,13 +56,9 @@
 
 ## API 配置（BYOK）
 
-本项目不内置 API Key、不中转数据。请自行注册免费模型服务：
+本项目不内置 API Key、不中转数据。免费通道详见上方「快速开始」第 3 步的表格。
 
-| 通道 | 免费视觉模型 | 说明 |
-|---|---|---|
-| 智谱 | **GLM-4.6V-Flash** | 输入/输出/缓存全免费，通用视觉理解（首选），注册：https://open.bigmodel.cn |
-| 硅基流动 | PaddleOCR-VL-1.5 | 仅 OCR 型，理解力弱，作降级备选，注册：https://siliconflow.cn |
-| Ollama 本地 | qwen3-vl / qwen2.5vl | 零联网零 key，7B 需约 8–10 GB 显存，下载：https://ollama.com |
+注册入口：智谱 [open.bigmodel.cn](https://open.bigmodel.cn) ｜ 硅基流动 [siliconflow.cn](https://siliconflow.cn) ｜ Ollama [ollama.com](https://ollama.com)。
 
 > 以上免费额度以 2026-11 官方价格页为准（跑腿核验），如有变动请提 Issue。本项目不打包 key、不中转数据、不做多账号轮询。
 
