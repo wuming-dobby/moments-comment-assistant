@@ -8,6 +8,7 @@ a = Analysis(
     datas=[],
     hiddenimports=[
         'PyQt5',
+        'PyQt5.QtNetwork',
         'PIL',
         'pyperclip',
         'openai',

@@ -37,7 +37,7 @@
    | API Key | 服务商控制台获取（Ollama 可随便填） |
    | Model | 视觉模型名，如 `Qwen/Qwen2.5-VL-7B-Instruct`、`GLM-4.6V-Flash` |
 
-   配置保存在仓库根 `config.json`（已在 .gitignore，不会提交）。可选免费通道（2026-11 现状，以官方价格页为准）：
+   配置保存在 `%APPDATA%\MomentsAssistant\config.json`（v0.2 起；旧的仓库根 `config.json` 首次启动会自动迁移）。可选免费通道（2026-11 现状，以官方价格页为准）：
 
    | 通道 | 免费视觉模型 | 说明 |
    |---|---|---|
@@ -64,9 +64,18 @@
 
 ## 技术栈
 
-- Python + PyQt（浮窗）+ GDI（截图）
+- Python + PyQt（浮窗）+ PrintWindow（截图，失败降级 BitBlt）
 - OpenAI 兼容 Vision API
 - 零注入、零 Hook、零数据库解密
+
+## v0.2 变更（微信 4.x 兼容）
+
+- **窗口识别按进程名**（`Weixin.exe` / `WeChat.exe`），不再依赖 `WeChatMainWndForPC` 类名；前台窗属于微信时优先截它（朋友圈是独立窗）
+- **托盘常驻**：无边框浮窗不再"启动即隐身"；托盘菜单可显示、常显、设置 API、退出；重复双击会唤起已有实例而不是再开一个
+- **截图改 PrintWindow(PW_RENDERFULLCONTENT)** 后按客户区裁切；黑图/白图/纯色图自动判无效并降级
+- **配置与日志落 `%APPDATA%\MomentsAssistant`**，修复 onefile 打包后配置写进临时目录、关掉即丢
+- **按钮区**：生成评论 ｜ 用剪贴板图片（兜底）｜ 隐藏
+- 可测性：`find_wechat_window()` 依赖可注入，`crop_client()` / `is_invalid()` 为纯函数（`pytest tests` 13 项）
 
 ## License
 
