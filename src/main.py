@@ -3,11 +3,18 @@ import ctypes
 import sys
 
 import pyperclip
-from PyQt5 import QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 import capture
 import vision
+from config_window import ConfigWindow
 from overlay import CommentOverlay
+
+
+def open_config(overlay):
+    win = ConfigWindow()
+    overlay.config_win = win  # 保住引用，防 Python 侧回收把窗口带走
+    win.show()
 
 
 def generate(overlay):
@@ -35,7 +42,17 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     overlay = CommentOverlay()
     overlay.generate_clicked.connect(lambda: generate(overlay))
+    overlay.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+    settings_action = QtWidgets.QAction("设置 API…", overlay)
+    settings_action.triggered.connect(lambda: open_config(overlay))
+    overlay.addAction(settings_action)
     overlay.poll()
+    try:
+        cfg = vision.load_config()
+    except Exception:
+        cfg = {}  # config.json 坏了也先开配置页，不崩
+    if not (cfg.get("VL_API_KEY") and cfg.get("VL_MODEL")):
+        open_config(overlay)
     sys.exit(app.exec_())
 
 

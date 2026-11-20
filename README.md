@@ -17,19 +17,54 @@
 
 ## 快速开始
 
-> 【S1 开发中】
+1. 安装依赖（Python 3.10+）：
+
+   ```
+   pip install -r requirements.txt
+   ```
+
+2. 运行：
+
+   ```
+   python src/main.py
+   ```
+
+3. 配置 API：首次启动会自动弹出配置页（之后在浮窗上点右键 →「设置 API…」可随时修改）。填三项后先点「检测 Key」，标绿 ✓ 再保存：
+
+   | 字段 | 说明 |
+   |---|---|
+   | API Base URL | OpenAI 兼容接口地址；Ollama 本地填 `http://localhost:11434/v1` |
+   | API Key | 服务商控制台获取（Ollama 可随便填） |
+   | Model | 视觉模型名，如 `Qwen/Qwen2.5-VL-7B-Instruct`、`glm-4v-flash` |
+
+   配置保存在仓库根 `config.json`（已在 .gitignore，不会提交）。可选免费通道（2026-11 现状，以官方价格页为准）：
+
+   | 通道 | 免费视觉模型 | 说明 |
+   |---|---|---|
+   | 智谱 | **GLM-4.6V-Flash** | 输入/输出/缓存全免费，通用视觉理解，首选 |
+   | 硅基流动 | PaddleOCR-VL-1.5 | 仅 OCR 型，理解力弱，作降级备选 |
+   | Ollama 本地 | qwen3-vl / qwen2.5vl / minicpm-v | 零联网零 key，7B 需约 8–10 GB 显存 |
+
+4. 打包单文件 exe（可选）：
+
+   ```
+   pip install pyinstaller
+   pyinstaller build.spec
+   ```
+
+   产物在 `dist/朋友圈评论助手.exe`。
 
 ## API 配置（BYOK）
 
 本项目不内置 API Key、不中转数据。请自行注册免费模型服务：
 
-| 通道 | 费用 | 注册链接 |
+| 通道 | 免费视觉模型 | 说明 |
 |---|---|---|
-| 硅基流动（Qwen-VL 类） | ¥0 免费档 | https://siliconflow.cn |
-| 智谱 GLM-4V-Flash | ¥0 免费额度 | https://open.bigmodel.cn |
-| 本地 Ollama（qwen-vl 等） | ¥0 | https://ollama.com |
+| 智谱 | **GLM-4.6V-Flash** | 输入/输出/缓存全免费，通用视觉理解（首选），注册：https://open.bigmodel.cn |
+| 硅基流动 | PaddleOCR-VL-1.5 | 仅 OCR 型，理解力弱，作降级备选，注册：https://siliconflow.cn |
+| Ollama 本地 | qwen3-vl / qwen2.5vl | 零联网零 key，7B 需约 8–10 GB 显存，下载：https://ollama.com |
 
-> 以上免费额度以 2026-11 现状为准，如有变动请提 Issue。
+> 以上免费额度以 2026-11 官方价格页为准（跑腿核验），如有变动请提 Issue。本项目不打包 key、不中转数据、不做多账号轮询。
 
 ## 技术栈
 
