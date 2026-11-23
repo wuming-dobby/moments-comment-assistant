@@ -151,7 +151,7 @@ class BallOverlay(QtWidgets.QWidget):
         try:
             png = self._grab_strip(hwnd)
             text = self._ocr_fn(png) or ""
-            self._ocr_result = ocr.MOMENTS_KEYWORD in text
+            self._ocr_result = ocr.moments_hit(text)
         except Exception as exc:
             paths.log().warning("ball OCR 失败，降级前台即显：%s", exc)
             self._ocr_result = None

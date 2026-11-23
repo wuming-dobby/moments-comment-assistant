@@ -4,6 +4,7 @@ v0.1 只认类名 WeChatMainWndForPC（微信 3.x），在微信 4.x 上一个�
 现在改成按进程名枚举，类名只用于日志提示。
 """
 import ctypes
+import io
 import statistics
 import time
 from pathlib import Path
@@ -274,6 +275,24 @@ def capture_wechat(hwnd=None, out_dir=None):
     image.save(str(path), "PNG")
     paths.prune_shots()
     return str(path)
+
+
+def grab_top_strip(hwnd, height=120):
+    """客户区顶部窄带（全宽×height px）→ PNG 字节。复用 PrintWindow/BitBlt 管线。"""
+    if win32gui.IsIconic(hwnd):
+        raise RuntimeError("微信窗口已最小化，无法截窄带")
+    cr, c0 = _client_box(hwnd)
+    try:
+        full, wr = _window_bitmap(hwnd)
+        image = crop_client(full, wr, cr, c0)
+    except Exception:
+        image = _screen_bitmap(hwnd)
+    strip = image.crop((0, 0, image.width, min(height, image.height)))
+    # v0.3.2: 顶部标题字号小、灰底对比低，2x 放大提高 OCR 命中率（真机实测 1x 只认出「圈」）
+    strip = strip.resize((strip.width * 2, strip.height * 2))
+    buf = io.BytesIO()
+    strip.save(buf, "PNG")
+    return buf.getvalue()
 
 
 def capture_from_clipboard(out_dir=None):
