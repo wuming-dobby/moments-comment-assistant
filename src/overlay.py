@@ -90,6 +90,7 @@ class CommentOverlay(QtWidgets.QWidget):
         super().__init__()
         self.pinned = False
         self.always_visible = False
+        self.auto_show = False  # v0.3.1: 「微信前台自动显示」默认关，由 VL_SHOW_OVERLAY 开
         self._moments_finder = moments_finder
         # WindowDoesNotAcceptFocus：点按钮不抢微信的前台
         self.setWindowFlags(
@@ -140,7 +141,10 @@ class CommentOverlay(QtWidgets.QWidget):
     def want_visible(self):
         if self._moments_finder and self._moments_finder():
             return False  # 朋友圈窗在：浮球接管，浮窗让位
-        return bool(self.pinned or self.always_visible or capture.wechat_in_foreground())
+        if self.pinned or self.always_visible:
+            return True
+        # v0.3.1: 「微信前台自动显示」默认关（用户嫌右下角框打扰），VL_SHOW_OVERLAY=1 才开
+        return self.auto_show and capture.wechat_in_foreground()
 
     def poll(self):
         want = self.want_visible()

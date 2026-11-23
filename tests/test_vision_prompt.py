@@ -66,7 +66,7 @@ def test_generate_comment_params_and_quote_strip(tmp_path, monkeypatch):
         cfg={"VL_API_KEY": "k", "VL_MODEL": "m", "VL_API_BASE": "https://x.test/v1"},
     )
     assert draft == "这色泽，米饭杀手啊"
-    assert fake.calls["max_tokens"] == 40
+    assert fake.calls["max_tokens"] == 512  # v0.3.1: 推理模型思考占 token，40 会致 content 空
     assert fake.calls["temperature"] == 0.8
     assert fake.calls["timeout"] == 60
     system = fake.calls["messages"][0]

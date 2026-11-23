@@ -12,8 +12,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import capture
 from overlay import animations_enabled
 
-SIZE = 48
-MARGIN = 8
+SIZE = 36          # v0.3.1: 48→36，用户嫌大
+RIGHT_MARGIN = 48  # v0.3.1: 锚点离窗口右上角一段距离（窗内右边距）
+TOP_MARGIN = 64    # v0.3.1: 窗内上边距（避开标题栏）
 OPACITY = 0.85
 FADE_MS = 150
 
@@ -105,7 +106,7 @@ class BallOverlay(QtWidgets.QWidget):
         wr = self._rect_of(self._hwnd) if self._hwnd else None
         if not wr:
             return None
-        pos = QtCore.QPoint(wr[2] - SIZE - MARGIN, wr[1] + MARGIN)
+        pos = QtCore.QPoint(wr[2] - SIZE - RIGHT_MARGIN, wr[1] + TOP_MARGIN)
         if self._dragged and self._drag_offset is not None:
             pos += self._drag_offset
         return pos

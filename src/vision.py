@@ -162,7 +162,7 @@ def _call_vl(cfg, data_url):
                 ],
             },
         ],
-        max_tokens=40,
+        max_tokens=512,  # v0.3.1: 混合推理模型（deepseek/GLM/qwen3-vl）思考要占 token，40 会被烧光致 content 空
         temperature=0.8,
         timeout=60,
     )

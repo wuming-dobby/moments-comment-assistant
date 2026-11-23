@@ -59,18 +59,23 @@ def test_m3_overlay_yields_to_ball(monkeypatch):
 
 
 def test_m3_overlay_shows_without_moments_window(monkeypatch):
-    monkeypatch.setattr(overlay_mod.capture, "wechat_in_foreground", lambda: True)
+    # v0.3.1: 微信前台不再自动显示浮窗，须 VL_SHOW_OVERLAY 开关（auto_show=True）
+    monkeypatch.setattr(overlay_mod.capture, "wechat_in_foreground", lambda **kw: True)
     ov = overlay_mod.CommentOverlay(moments_finder=lambda: None)
     try:
+        assert not ov.want_visible(), "默认隐藏"
+        ov.auto_show = True
         assert ov.want_visible()
     finally:
         ov.close()
 
 
 def test_m3_overlay_shows_without_finder(monkeypatch):
-    monkeypatch.setattr(overlay_mod.capture, "wechat_in_foreground", lambda: True)
+    monkeypatch.setattr(overlay_mod.capture, "wechat_in_foreground", lambda **kw: True)
     ov = overlay_mod.CommentOverlay()
     try:
+        assert not ov.want_visible(), "v0.3.1 默认隐藏"
+        ov.auto_show = True
         assert ov.want_visible()
     finally:
         ov.close()

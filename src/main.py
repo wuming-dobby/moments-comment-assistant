@@ -227,6 +227,7 @@ def main():
     except Exception:
         log.exception("config 读取失败")
     overlay.always_visible = bool(cfg.get("OVERLAY_ALWAYS_VISIBLE"))
+    overlay.auto_show = str(cfg.get("VL_SHOW_OVERLAY") or "") == "1"  # v0.3.1: 右下角浮窗默认隐藏
     act_always.setChecked(overlay.always_visible)
 
     act_show.triggered.connect(overlay.show_pinned)
@@ -261,7 +262,7 @@ def main():
         tray.showMessage("朋友圈评论助手", "先填 API Key 与 Model，再回微信里用。",
                          QtWidgets.QSystemTrayIcon.Information, 6000)
     elif not overlay.isVisible():
-        tray.showMessage("朋友圈评论助手", "已在后台运行：微信在前台时显示浮窗，点托盘图标可随时唤出。",
+        tray.showMessage("朋友圈评论助手", "已在后台运行：微信在前台时右上角出现「评」浮球，点它生成评论；点托盘图标可唤出浮窗。",
                          QtWidgets.QSystemTrayIcon.Information, 6000)
 
     sys.exit(app.exec_())

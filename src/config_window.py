@@ -40,6 +40,9 @@ class ConfigWindow(QtWidgets.QDialog):
         form.addRow("API Base URL", self.base_edit)
         form.addRow("API Key", self.key_edit)
         form.addRow("Model", self.model_edit)
+        # v0.3.1: 右下角备用浮窗默认隐藏，勾选才随微信前台自动显示
+        self.show_overlay_check = QtWidgets.QCheckBox("显示右下角备用浮窗（微信在前台时自动出现；不勾则只用浮球和托盘）")
+        form.addRow("", self.show_overlay_check)
 
         persona_group = QtWidgets.QGroupBox("人设（写评论时扮演你，让评论更像本人）")
         persona_form = QtWidgets.QFormLayout()
@@ -128,6 +131,7 @@ class ConfigWindow(QtWidgets.QDialog):
         self.base_edit.setText(str(cfg.get("VL_API_BASE") or ""))
         self.key_edit.setText(str(cfg.get("VL_API_KEY") or ""))
         self.model_edit.setText(str(cfg.get("VL_MODEL") or ""))
+        self.show_overlay_check.setChecked(str(cfg.get("VL_SHOW_OVERLAY") or "") == "1")
 
         self._select_data(self.gender_combo, str(cfg.get("VL_PERSONA_GENDER") or ""))
         self._select_data(self.style_combo, str(cfg.get("VL_PERSONA_STYLE") or ""), DEFAULT_STYLE)
@@ -158,6 +162,7 @@ class ConfigWindow(QtWidgets.QDialog):
             "VL_PERSONA_STYLE": self.style_combo.currentData() or "",
             "VL_PERSONA_CATCHPHRASE": self.catchphrase_edit.text().strip(),
             "VL_PERSONA_CLOSENESS": self.closeness_combo.currentData() or "",
+            "VL_SHOW_OVERLAY": "1" if self.show_overlay_check.isChecked() else "0",
         }
         if self.fallback_group.isChecked():
             fields.update({

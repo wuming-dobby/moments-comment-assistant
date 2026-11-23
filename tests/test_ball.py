@@ -36,7 +36,7 @@ def test_b2_shows_when_moments_window():
     b.poll()
     assert b.isVisible()
     assert b.moments_hwnd() == 0x20
-    assert b.pos() == QPoint(344, 108)  # (400-48-8, 100+8)
+    assert b.pos() == QPoint(316, 164)  # (400-36-48, 100+64) v0.3.1 新锚点
 
 
 def test_b2_hides_when_window_gone():
@@ -72,10 +72,10 @@ def test_b2_drag_moves_and_keeps_offset():
     b.mouseMoveEvent(_event(QEvent.MouseMove, 20, 5))
     b.mouseReleaseEvent(_event(QEvent.MouseButtonRelease, 20, 5, Qt.LeftButton))
     assert clicks == []
-    assert b.pos() == QPoint(359, 108)  # 344+15
+    assert b.pos() == QPoint(331, 164)  # 316+15
     state["rect"] = (200, 100, 500, 500)
     b.poll()
-    assert b.pos() == QPoint(459, 108)  # (500-56,108)+用户拖出的偏移(15,0)
+    assert b.pos() == QPoint(431, 164)  # (500-36-48,164)+用户拖出的偏移(15,0)
 
 
 # ---------- v0.3 规格改判（33ef761）：双分支显隐 ----------
@@ -88,7 +88,7 @@ def test_b3_fallback_shows_on_main_window_when_no_moments_window():
     b.poll()
     assert b.isVisible(), "微信前台时浮球该显示"
     assert b.moments_hwnd() == 0x30
-    assert b.pos() == QPoint(600 - 48 - 8, 150 + 8)  # 主窗右上角内侧
+    assert b.pos() == QPoint(600 - 36 - 48, 150 + 64)  # 主窗右上内偏移（v0.3.1 锚点）
 
 
 def test_b3_fallback_hides_when_wechat_not_foreground():
@@ -109,4 +109,4 @@ def test_b3_moments_window_wins_over_fallback():
     state["fg"] = 0x30
     b.poll()
     assert b.moments_hwnd() == 0x20
-    assert b.pos() == QPoint(344, 108)
+    assert b.pos() == QPoint(316, 164)
