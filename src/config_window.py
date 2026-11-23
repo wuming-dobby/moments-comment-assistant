@@ -1,4 +1,4 @@
-"""BYOK 配置页：三项输入 → 存 %APPDATA%\\MomentsAssistant\\config.json；「检测 Key」发一条最小 VL 请求验证。"""
+"""BYOK 配置页：主通道三项 + 人设问卷 + 备用通道 → 存 %APPDATA%\\MomentsAssistant\\config.json。"""
 import base64
 import html
 import io
@@ -14,6 +14,12 @@ import vision
 _buf = io.BytesIO()
 Image.new("RGB", (1, 1), "white").save(_buf, "PNG")
 PNG_1X1_B64 = base64.b64encode(_buf.getvalue()).decode("ascii")
+
+GENDER_OPTIONS = (("不填", ""), ("男", "男"), ("女", "女"))
+STYLE_OPTIONS = ("温和真诚", "幽默调侃", "简洁干脆")
+CLOSENESS_OPTIONS = ("一般", "很熟", "偏同事客户")
+DEFAULT_STYLE = "温和真诚"
+DEFAULT_CLOSENESS = "一般"
 
 
 class ConfigWindow(QtWidgets.QDialog):
@@ -31,6 +37,42 @@ class ConfigWindow(QtWidgets.QDialog):
         form.addRow("API Base URL", self.base_edit)
         form.addRow("API Key", self.key_edit)
         form.addRow("Model", self.model_edit)
+
+        persona_group = QtWidgets.QGroupBox("人设（写评论时扮演你，让评论更像本人）")
+        persona_form = QtWidgets.QFormLayout()
+        self.gender_combo = QtWidgets.QComboBox()
+        for label, data in GENDER_OPTIONS:
+            self.gender_combo.addItem(label, data)
+        self.style_combo = QtWidgets.QComboBox()
+        for style in STYLE_OPTIONS:
+            self.style_combo.addItem(style, style)
+        self.catchphrase_edit = QtWidgets.QLineEdit()
+        self.catchphrase_edit.setPlaceholderText("如「哈哈哈」「好家伙」，可不填")
+        self.closeness_combo = QtWidgets.QComboBox()
+        for closeness in CLOSENESS_OPTIONS:
+            self.closeness_combo.addItem(closeness, closeness)
+        persona_form.addRow("性别", self.gender_combo)
+        persona_form.addRow("说话风格", self.style_combo)
+        persona_form.addRow("口头禅", self.catchphrase_edit)
+        persona_form.addRow("与好友熟络度", self.closeness_combo)
+        persona_hint = QtWidgets.QLabel("这些信息与截图一样，只随请求发给上面配置的 API，本项目不经手。")
+        persona_hint.setWordWrap(True)
+        persona_form.addRow(persona_hint)
+        persona_group.setLayout(persona_form)
+
+        self.fallback_group = QtWidgets.QGroupBox("备用通道（主通道限流时自动切换，可选）")
+        self.fallback_group.setCheckable(True)
+        self.fallback_group.setChecked(False)
+        fb_form = QtWidgets.QFormLayout()
+        self.fb_base_edit = QtWidgets.QLineEdit()
+        self.fb_base_edit.setPlaceholderText("如 https://api-inference.modelscope.cn/v1/")
+        self.fb_key_edit = QtWidgets.QLineEdit()
+        self.fb_model_edit = QtWidgets.QLineEdit()
+        self.fb_model_edit.setPlaceholderText("如 Qwen/Qwen2.5-VL-7B-Instruct")
+        fb_form.addRow("备用 Base URL", self.fb_base_edit)
+        fb_form.addRow("备用 API Key", self.fb_key_edit)
+        fb_form.addRow("备用 Model", self.fb_model_edit)
+        self.fallback_group.setLayout(fb_form)
 
         self.status = QtWidgets.QLabel()
         self.status.setWordWrap(True)
@@ -50,6 +92,8 @@ class ConfigWindow(QtWidgets.QDialog):
 
         box = QtWidgets.QVBoxLayout(self)
         box.addLayout(form)
+        box.addWidget(persona_group)
+        box.addWidget(self.fallback_group)
         box.addWidget(self.status)
         box.addLayout(buttons)
 
@@ -66,12 +110,45 @@ class ConfigWindow(QtWidgets.QDialog):
         self.key_edit.setText(str(cfg.get("VL_API_KEY") or ""))
         self.model_edit.setText(str(cfg.get("VL_MODEL") or ""))
 
+        self._select_data(self.gender_combo, str(cfg.get("VL_PERSONA_GENDER") or ""))
+        self._select_data(self.style_combo, str(cfg.get("VL_PERSONA_STYLE") or ""), DEFAULT_STYLE)
+        self.catchphrase_edit.setText(str(cfg.get("VL_PERSONA_CATCHPHRASE") or ""))
+        self._select_data(self.closeness_combo, str(cfg.get("VL_PERSONA_CLOSENESS") or ""),
+                          DEFAULT_CLOSENESS)
+
+        fb_vals = [str(cfg.get(k) or "") for k in vision.FALLBACK_KEYS]
+        if any(fb_vals):
+            self.fallback_group.setChecked(True)
+            self.fb_base_edit.setText(fb_vals[0])
+            self.fb_key_edit.setText(fb_vals[1])
+            self.fb_model_edit.setText(fb_vals[2])
+
+    @staticmethod
+    def _select_data(combo, value, default=""):
+        idx = combo.findData(value)
+        if idx < 0:
+            idx = combo.findData(default)
+        combo.setCurrentIndex(max(idx, 0))
+
     def _fields(self):
-        return {
+        fields = {
             "VL_API_BASE": self.base_edit.text().strip(),
             "VL_API_KEY": self.key_edit.text().strip(),
             "VL_MODEL": self.model_edit.text().strip(),
+            "VL_PERSONA_GENDER": self.gender_combo.currentData() or "",
+            "VL_PERSONA_STYLE": self.style_combo.currentData() or "",
+            "VL_PERSONA_CATCHPHRASE": self.catchphrase_edit.text().strip(),
+            "VL_PERSONA_CLOSENESS": self.closeness_combo.currentData() or "",
         }
+        if self.fallback_group.isChecked():
+            fields.update({
+                "VL_FALLBACK_API_BASE": self.fb_base_edit.text().strip(),
+                "VL_FALLBACK_KEY": self.fb_key_edit.text().strip(),
+                "VL_FALLBACK_MODEL": self.fb_model_edit.text().strip(),
+            })
+        else:
+            fields.update({k: "" for k in vision.FALLBACK_KEYS})
+        return fields
 
     def save(self):
         paths.ensure_dirs()

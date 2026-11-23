@@ -29,3 +29,7 @@ config.json
 
 # Screenshots (user data, not repo content)
 screenshots/
+# µ÷ÊÔÁÙÊ±¼ş
+pt*.txt
+pytest_out*.txt
+qt_dbg.txt

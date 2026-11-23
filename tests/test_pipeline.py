@@ -64,7 +64,8 @@ def check_vision_with_stub():
             )
 
     png = ROOT / "tests" / "_stub_shot.png"
-    png.write_bytes(b"\x89PNG\r\n\x1a\n stub-bytes-not-a-real-png")
+    from PIL import Image
+    Image.new("RGB", (320, 200), "white").save(png, "PNG")
     saved = vision.OpenAI
     vision.OpenAI = FakeClient
     try:
@@ -80,7 +81,7 @@ def check_vision_with_stub():
     assert calls["api_key"] == "test-key" and calls["model"] == "test-vl"
     assert calls["base_url"] == "https://example.test/v1"
     sent = calls["messages"][1]["content"][1]["image_url"]["url"]
-    assert sent.startswith("data:image/png;base64,"), "截图应随请求一起发出"
+    assert sent.startswith("data:image/jpeg;base64,"), "截图应压缩为 JPEG 后随请求发出"
     print("PASS 配置齐全时 VL 返回非空评论：%s" % draft)
 
 

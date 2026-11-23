@@ -37,12 +37,16 @@
    | API Key | 服务商控制台获取（Ollama 可随便填） |
    | Model | 视觉模型名，如 `Qwen/Qwen2.5-VL-7B-Instruct`、`GLM-4.6V-Flash` |
 
-   配置保存在 `%APPDATA%\MomentsAssistant\config.json`（v0.2 起；旧的仓库根 `config.json` 首次启动会自动迁移）。可选免费通道（2026-11 现状，以官方价格页为准）：
+   配置保存在 `%APPDATA%\MomentsAssistant\config.json`（v0.2 起；旧的仓库根 `config.json` 首次启动会自动迁移）。配置页还可勾选「备用通道」（Base URL / Key / Model 三项齐全才生效，主通道重试后仍失败时自动切换）并填写人设问卷（性别 / 说话风格 / 口头禅 / 熟络度），让评论更像你本人；这些信息与截图一样，仅发往你自行配置的 API，本项目不经手。
+
+   可选免费通道（2026-11 现状，以官方价格页为准）：
 
    | 通道 | 免费视觉模型 | 说明 |
    |---|---|---|
-   | 智谱 | **GLM-4.6V-Flash** | 输入/输出/缓存全免费，通用视觉理解，首选 |
-   | 硅基流动 | PaddleOCR-VL-1.5 | 仅 OCR 型，理解力弱，作降级备选 |
+   | 智谱 | **GLM-4.6V-Flash** | 输入/输出/缓存全免费，通用视觉理解，首选；高峰会限流属正常，会自动重试/切备用 |
+   | 魔搭 ModelScope | `Qwen/Qwen2.5-VL-7B-Instruct` | 免费，需绑定阿里云实名；推荐配作备用通道，base_url `https://api-inference.modelscope.cn/v1/` |
+   | 阿里云百炼 | qwen-vl-plus | 新用户 100 万 token/90 天；**用尽自动扣费，本项目默认不推荐** |
+   | 火山方舟 | 试用额度 | 活动型，以官网为准 |
    | Ollama 本地 | qwen3-vl / qwen2.5vl / minicpm-v | 零联网零 key，7B 需约 8–10 GB 显存 |
 
 4. 打包单文件 exe（可选）：
@@ -58,7 +62,7 @@
 
 本项目不内置 API Key、不中转数据。免费通道详见上方「快速开始」第 3 步的表格。
 
-注册入口：智谱 [open.bigmodel.cn](https://open.bigmodel.cn) ｜ 硅基流动 [siliconflow.cn](https://siliconflow.cn) ｜ Ollama [ollama.com](https://ollama.com)。
+注册入口：智谱 [open.bigmodel.cn](https://open.bigmodel.cn) ｜ 魔搭 [modelscope.cn](https://modelscope.cn) ｜ 阿里云百炼 [bailian.console.aliyun.com](https://bailian.console.aliyun.com) ｜ 火山方舟 [volcengine.com](https://volcengine.com) ｜ Ollama [ollama.com](https://ollama.com)。均为裸域名，无邀请码、无返利链接。
 
 > 以上免费额度以 2026-11 官方价格页为准（跑腿核验），如有变动请提 Issue。本项目不打包 key、不中转数据、不做多账号轮询。
 
