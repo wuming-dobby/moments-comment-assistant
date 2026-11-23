@@ -3,13 +3,19 @@
 显隐双分支（v0.3 规格改判 33ef761）：
 - 分支 A：有独立朋友圈窗口（旧版微信）→ 锚定该窗右上角内侧；
 - 分支 B：微信 4.x 无独立朋友圈窗（常态）→ 微信主窗在前台时锚定主窗右上角内侧。
+  v0.3.2（§八 方案A）：分支 B 再经 OCR 门控——后台线程截主窗顶部窄带，
+  系统 OCR 命中「朋友圈」才显示；OCR 不可用则降级为「前台即显」。
 微信最小化/关闭 → 淡出隐藏。1s 轮询，可拖拽；拖过后按锚点偏移跟随窗口移动。
 置顶但不抢焦点（WindowDoesNotAcceptFocus + WA_ShowWithoutActivating）。
 """
+import threading
+
 import win32gui
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 import capture
+import ocr
+import paths
 from overlay import animations_enabled
 
 SIZE = 36          # v0.3.1: 48→36，用户嫌大
@@ -41,12 +47,16 @@ class BallOverlay(QtWidgets.QWidget):
     shown = QtCore.pyqtSignal()
 
     def __init__(self, *, find_window=None, rect_of=None, win_ok=None,
-                 foreground_window=None, poll_ms=1000):
+                 foreground_window=None, poll_ms=1000,
+                 ocr_fn=None, grab_strip=None, moments_only=True):
         super().__init__()
         self._find_window = find_window or capture.find_moments_window
         self._rect_of = rect_of or _default_rect_of
         self._win_ok = win_ok or win32gui.IsWindow
         self._foreground_window = foreground_window or _default_foreground_wechat
+        self._ocr_fn = ocr_fn or ocr.ocr_text
+        self._grab_strip = grab_strip or capture.grab_top_strip
+        self.moments_only = moments_only
         self._hwnd = None
         self._busy = False
         self._dragged = False
@@ -55,6 +65,11 @@ class BallOverlay(QtWidgets.QWidget):
         self._press_pos = None
         self._moved = False
         self._anim = None
+        self._ocr_thread = None
+        self._ocr_result = None
+        self._last_hit = False
+        self._ocr_degraded = False
+        self._ocr_warned = False
 
         self.setWindowFlags(
             QtCore.Qt.WindowStaysOnTopHint
@@ -91,6 +106,8 @@ class BallOverlay(QtWidgets.QWidget):
             hwnd = self._foreground_window()
             if hwnd and not self._win_ok(hwnd):
                 hwnd = None
+            if hwnd and self.moments_only:
+                hwnd = self._ocr_gate(hwnd)
         if hwnd:
             self._hwnd = hwnd
             self._anchor()
@@ -101,6 +118,44 @@ class BallOverlay(QtWidgets.QWidget):
             self._hwnd = None
             if self.isVisible():
                 self._fade_out()
+
+    # ---------- 分支 B OCR 门控（v0.3.2 §八 方案A） ----------
+
+    def _ocr_gate(self, hwnd):
+        """OCR 判朋友圈页：挂起中维持上一轮判定（防闪烁）；消费结果后立即重启下一轮。"""
+        if self._ocr_degraded:
+            self._ocr_thread = None
+            if not self._ocr_warned:
+                paths.log().warning("朋友圈页面识别降级：微信前台即显浮球")
+                self._ocr_warned = True
+            return hwnd
+        thread = self._ocr_thread
+        if thread is not None and thread.is_alive():
+            return hwnd if self._last_hit else None
+        if thread is not None:
+            self._ocr_thread = None
+            result, self._ocr_result = self._ocr_result, None
+            self._last_hit = bool(result)
+            self._start_ocr(hwnd)
+            return hwnd if result else None
+        self._start_ocr(hwnd)
+        return None
+
+    def _start_ocr(self, hwnd):
+        self._ocr_thread = threading.Thread(
+            target=self._ocr_run, args=(hwnd,), daemon=True)
+        self._ocr_thread.start()
+
+    def _ocr_run(self, hwnd):
+        """OCR 工作线程：截窄带→识别→写结果。任何异常→会话内降级「前台即显」。"""
+        try:
+            png = self._grab_strip(hwnd)
+            text = self._ocr_fn(png) or ""
+            self._ocr_result = ocr.MOMENTS_KEYWORD in text
+        except Exception as exc:
+            paths.log().warning("ball OCR 失败，降级前台即显：%s", exc)
+            self._ocr_result = None
+            self._ocr_degraded = True
 
     def _anchor_pos(self):
         wr = self._rect_of(self._hwnd) if self._hwnd else None
