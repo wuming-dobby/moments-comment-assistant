@@ -33,3 +33,6 @@ screenshots/
 pt*.txt
 pytest_out*.txt
 qt_dbg.txt
+
+# 本地备份，不入库
+src_v01_backup/
