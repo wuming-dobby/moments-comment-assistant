@@ -126,6 +126,29 @@ def wechat_in_foreground(*, foreground=None, proc_name_of=None):
     return not win32gui.IsIconic(fg)
 
 
+MOMENTS_TITLE_KEYWORDS = ("朋友圈", "Moments")
+
+
+def title_of(hwnd):
+    try:
+        return win32gui.GetWindowText(hwnd)
+    except Exception:
+        return ""
+
+
+def find_moments_window(*, enum_windows=None, proc_name_of=None, title_of=None):
+    """朋友圈窗口：进程名是微信且标题含候选关键词（只读枚举）。找不到返回 None。"""
+    enum_windows = enum_windows or globals()["enum_visible_windows"]
+    proc_name_of = proc_name_of or globals()["proc_name_of"]
+    title_of = title_of or globals()["title_of"]
+    for hwnd in enum_windows():
+        if proc_name_of(hwnd).lower() not in WECHAT_PROCS:
+            continue
+        if any(kw in title_of(hwnd) for kw in MOMENTS_TITLE_KEYWORDS):
+            return hwnd
+    return None
+
+
 # ---------- 纯函数（可单测） ----------
 
 def crop_client(img, wr, cr, c0):

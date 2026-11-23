@@ -6,10 +6,11 @@ import json
 
 from openai import OpenAI
 from PIL import Image
-from PyQt5 import QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 import paths
 import vision
+from overlay import AnimatedButton, animations_enabled
 
 _buf = io.BytesIO()
 Image.new("RGB", (1, 1), "white").save(_buf, "PNG")
@@ -27,6 +28,8 @@ class ConfigWindow(QtWidgets.QDialog):
         super().__init__(parent)
         self.setWindowTitle("API 配置（BYOK）")
         self.setMinimumWidth(460)
+        self._faded_in = False
+        self._anim = None
 
         form = QtWidgets.QFormLayout()
         self.base_edit = QtWidgets.QLineEdit()
@@ -78,9 +81,9 @@ class ConfigWindow(QtWidgets.QDialog):
         self.status.setWordWrap(True)
         self.status.hide()
 
-        self.test_btn = QtWidgets.QPushButton("检测 Key")
-        save_btn = QtWidgets.QPushButton("保存")
-        close_btn = QtWidgets.QPushButton("关闭")
+        self.test_btn = AnimatedButton("检测 Key", parent=self)
+        save_btn = AnimatedButton("保存", parent=self)
+        close_btn = AnimatedButton("关闭", hover="#e0e0e0", press="#c9c9c9", parent=self)
         self.test_btn.clicked.connect(self.test_key)
         save_btn.clicked.connect(self.save)
         close_btn.clicked.connect(self.close)
@@ -98,6 +101,22 @@ class ConfigWindow(QtWidgets.QDialog):
         box.addLayout(buttons)
 
         self._load()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if self._faded_in:
+            return
+        self._faded_in = True
+        self.setWindowOpacity(0.0)
+        if not animations_enabled():
+            self.setWindowOpacity(1.0)
+            return
+        anim = QtCore.QPropertyAnimation(self, b"windowOpacity", self)
+        anim.setDuration(200)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.start()
+        self._anim = anim
 
     def _load(self):
         """回显用合并后的配置（env 优先），用户看到的就是实际会用的值。"""

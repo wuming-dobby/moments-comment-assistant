@@ -1,6 +1,7 @@
 """主入口：托盘常驻 → 微信前台时显示浮窗 → 点「生成评论」→ 截图 → VL 出草稿 → 写剪贴板。
 
 v0.2 起：单实例（二次双击唤起已有浮窗）、托盘图标、配置与日志落 %APPDATA%。
+v0.3 起：朋友圈窗开着时浮球锚在窗右上角接管，浮窗让位。
 """
 import ctypes
 import sys
@@ -11,6 +12,7 @@ from PyQt5 import QtCore, QtGui, QtNetwork, QtWidgets
 import capture
 import paths
 import vision
+from ball import BallOverlay
 from config_window import ConfigWindow
 from overlay import CommentOverlay
 
@@ -60,22 +62,61 @@ def open_config(overlay):
     win.show()
 
 
+class GenerateWorker(QtCore.QThread):
+    """VL 生成放子线程；截图留在 UI 线程，生成期间事件循环不阻塞。"""
+    ok = QtCore.pyqtSignal(str)
+    fail = QtCore.pyqtSignal(str)
+
+    def __init__(self, image_path):
+        super().__init__()
+        self._image_path = image_path
+
+    def run(self):
+        try:
+            draft = vision.generate_comment(self._image_path)
+            if not draft:
+                raise RuntimeError("模型返回空内容")
+        except Exception as exc:
+            self.fail.emit(str(exc))
+        else:
+            self.ok.emit(draft)
+
+
 def _run_generate(overlay, image_path=None):
     overlay.hide()
     QtWidgets.QApplication.processEvents()  # 先让浮窗真的消失（降级 BitBlt 时不会拍到自己）
     try:
         path = image_path or capture.capture_wechat()
-        draft = vision.generate_comment(path)
-        if not draft:
-            raise RuntimeError("模型返回空内容")
-        pyperclip.copy(draft)
-        overlay.show_toast("草稿已复制到剪贴板，去微信里粘贴")
     except Exception as exc:
         paths.log().exception("generate 失败")
         overlay.show_toast("失败：%s" % exc)
-    finally:
         overlay.reset_button()
         overlay.poll()
+        return
+
+    def _done(draft):
+        try:
+            pyperclip.copy(draft)
+            overlay.show_toast("草稿已复制到剪贴板，去微信里粘贴")
+        except Exception as exc:
+            paths.log().exception("generate 失败")
+            overlay.show_toast("失败：%s" % exc)
+        finally:
+            overlay.reset_button()
+            overlay.poll()
+
+    def _fail(err):
+        paths.log().error("generate 失败: %s", err)
+        overlay.show_toast("失败：%s" % err)
+        overlay.reset_button()
+        overlay.poll()
+
+    worker = GenerateWorker(path)
+    worker.ok.connect(_done)
+    worker.fail.connect(_fail)
+    worker.finished.connect(worker.deleteLater)
+    overlay._worker = worker  # 保引用防 GC
+    worker.start()
 
 
 def generate(overlay):
@@ -94,6 +135,48 @@ def generate_from_clipboard(overlay):
         overlay.show_toast("失败：%s" % exc)
         return
     _run_generate(overlay, path)
+
+
+def generate_from_ball(ball, tray):
+    """浮球点击：截朋友圈窗 → 后台 VL 出草稿 → 剪贴板；反馈走托盘气泡（浮窗此时藏着）。"""
+    hwnd = ball.moments_hwnd() or capture.find_moments_window()
+    if not hwnd:
+        tray.showMessage("朋友圈评论助手", "没找到微信窗口（先打开微信）",
+                         QtWidgets.QSystemTrayIcon.Information, 4000)
+        return
+    try:
+        path = capture.capture_wechat(hwnd)
+    except Exception as exc:
+        paths.log().exception("generate(ball) 失败")
+        tray.showMessage("朋友圈评论助手", "失败：%s" % exc,
+                         QtWidgets.QSystemTrayIcon.Warning, 6000)
+        return
+    ball.set_busy(True)
+
+    def _done(draft):
+        try:
+            pyperclip.copy(draft)
+            tray.showMessage("朋友圈评论助手", "草稿已复制到剪贴板，去微信里粘贴",
+                             QtWidgets.QSystemTrayIcon.Information, 4000)
+        except Exception as exc:
+            paths.log().exception("generate(ball) 失败")
+            tray.showMessage("朋友圈评论助手", "失败：%s" % exc,
+                             QtWidgets.QSystemTrayIcon.Warning, 6000)
+        finally:
+            ball.set_busy(False)
+
+    def _fail(err):
+        paths.log().error("generate(ball) 失败: %s", err)
+        tray.showMessage("朋友圈评论助手", "失败：%s" % err,
+                         QtWidgets.QSystemTrayIcon.Warning, 6000)
+        ball.set_busy(False)
+
+    worker = GenerateWorker(path)
+    worker.ok.connect(_done)
+    worker.fail.connect(_fail)
+    worker.finished.connect(worker.deleteLater)
+    ball._worker = worker  # 保引用防 GC
+    worker.start()
 
 
 def main():
@@ -116,9 +199,12 @@ def main():
         log.info("startup: 已有实例在跑，已请求唤起")
         return
 
-    overlay = CommentOverlay()
+    overlay = CommentOverlay(moments_finder=capture.find_moments_window)
     overlay.generate_clicked.connect(lambda: generate(overlay))
     overlay.clipboard_clicked.connect(lambda: generate_from_clipboard(overlay))
+
+    ball = BallOverlay()
+    ball.shown.connect(overlay.hide)  # 朋友圈窗出现：浮球接管，浮窗让位
 
     server = QtNetwork.QLocalServer()
     QtNetwork.QLocalServer.removeServer(SERVER_NAME)
@@ -157,6 +243,7 @@ def main():
 
     act_always.toggled.connect(_toggle_always)
     overlay.hidden_by_user.connect(lambda: act_always.setChecked(False))
+    ball.clicked.connect(lambda: generate_from_ball(ball, tray))
 
     # 浮窗右键也给一个设置入口
     overlay.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)

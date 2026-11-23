@@ -66,3 +66,30 @@ def test_a10_rich_image_is_valid():
             img.putpixel((x, y), (x % 255, y % 255, (x * y) % 255))
     bad, info = capture.is_invalid(img)
     assert not bad, info
+
+
+def _moments_finder(windows):
+    """windows: {hwnd: (进程名, 标题)}"""
+    return capture.find_moments_window(
+        enum_windows=lambda: list(windows),
+        proc_name_of=lambda h: windows.get(h, ("", ""))[0],
+        title_of=lambda h: windows.get(h, ("", ""))[1],
+    )
+
+
+def test_a11_moments_hit_by_cn_title():
+    wins = {0x10: ("WeChat.exe", "微信"), 0x20: ("WeChat.exe", "朋友圈")}
+    assert _moments_finder(wins) == 0x20
+
+
+def test_a11_moments_hit_by_en_title():
+    wins = {0x10: ("WeChat.exe", "微信"), 0x20: ("WeChat.exe", "Moments")}
+    assert _moments_finder(wins) == 0x20
+
+
+def test_a11_main_window_title_not_moments():
+    assert _moments_finder({0x10: ("WeChat.exe", "微信")}) is None
+
+
+def test_a11_no_wechat_process_returns_none():
+    assert _moments_finder({0x30: ("chrome.exe", "朋友圈")}) is None
